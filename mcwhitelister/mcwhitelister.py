@@ -13,7 +13,7 @@ _ = Translator("McWhitelister", __file__)
 
 @cog_i18n(_)
 class McWhitelister(commands.Cog):
-    __version__ = "3.1.0"
+    __version__ = "3.1.1"
 
     def format_help_for_context(self, ctx: commands.Context) -> str:
         # Thanks Sinbad! And Trusty in whose cogs I found this.
@@ -131,11 +131,12 @@ class McWhitelister(commands.Cog):
         p_in_conf = await self.config.guild(ctx.guild).players()
         host, port, passw = await self.config.guild(ctx.guild).rcon()
         if str(ctx.author.id) in p_in_conf:
+            deleted = p_in_conf[str(ctx.author.id)]
+            del p_in_conf[str(ctx.author.id)]
             async with Client(host, port, passw) as c:
                 resp = await c.send_cmd(
-                    "whitelist remove {}".format(p_in_conf[str(ctx.author.id)]["name"])
+                    "whitelist remove {}".format(deleted)
                 )
-            del p_in_conf[str(ctx.author.id)]
             await self.config.guild(ctx.guild).players.set(p_in_conf)
             await ctx.send(resp[0])
         else:
@@ -165,6 +166,15 @@ class McWhitelister(commands.Cog):
             emb.add_field(name=_("Whitelisted"), value=page)
             rendered.append(emb)
         await menu(ctx, rendered, controls=DEFAULT_CONTROLS, timeout=60.0)
+
+    @commands.admin()
+    @whitelister.command(name="reload")
+    async def reload(self, ctx):
+        """Reload the whitelist on the Minecraft server."""
+        host, port, passw = await self.config.guild(ctx.guild).rcon()
+        async with Client(host, port, passw) as c:
+            resp = await c.send_cmd("whitelist reload")
+        await ctx.send(resp[0])
 
     @commands.guildowner()
     @commands.command()
